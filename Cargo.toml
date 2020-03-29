@@ -1,0 +1,7 @@
+[package]
+name = "job_control"
+version = "0.1.0"
+authors = ["Mike Alfaro <alfarom256@gmail.com>"]
+
+[dependencies]
+getopts = "0.2"
