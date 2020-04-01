@@ -23,6 +23,9 @@ fn print_help(prog : &str, opts: Options){
 }
 
 fn main(){
+    let mut quiet : bool = false;
+    let mut dbg : bool = false;
+
     //https://www.cs.brandeis.edu/~cs146a/rust/rustbyexample-02-21-2015/arg/getopts.html
     let args: Vec<String> = env::args().map(|x| x.to_string()).collect();
     let ref prog = args[0].clone();
@@ -42,7 +45,15 @@ fn main(){
     };
     
     if matches.opt_present("h") {
-        print_help(prog, opts)
+        print_help(prog, opts);
+        return;
+    }
+
+    quiet = matches.opt_present("q");    
+    dbg = matches.opt_present("d");
+
+    if quiet && dbg {
+        panic!("Cannot have debug *and* quiet output...");
     }
     
     println!("woooo!");
