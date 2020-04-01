@@ -1,5 +1,8 @@
 extern crate getopts;
 use getopts::Options;
+use std::env;
+mod lib;
+
 
 /*
 args: 
@@ -15,7 +18,10 @@ args:
     debug
 */
 
-use std::env;
+macro_rules!  dbg_print {
+    ($f:expr,$e:expr) => {if $f {println!("DEBUG: {}", $e);}}
+}
+
 
 fn print_help(prog : &str, opts: Options){
     let fmt = format!("Usage: {} -p/-pids 1,2,3,4 -c 0.01 -n", prog);
@@ -23,8 +29,8 @@ fn print_help(prog : &str, opts: Options){
 }
 
 fn main(){
-    let mut quiet : bool = false;
-    let mut dbg : bool = false;
+    let mut quiet : bool;
+    let mut dbg : bool;
 
     //https://www.cs.brandeis.edu/~cs146a/rust/rustbyexample-02-21-2015/arg/getopts.html
     let args: Vec<String> = env::args().map(|x| x.to_string()).collect();
@@ -55,6 +61,48 @@ fn main(){
     if quiet && dbg {
         panic!("Cannot have debug *and* quiet output...");
     }
-    
-    println!("woooo!");
+
+    // get the list of pids
+    let str_pids = match matches.opt_str("p"){
+        Some(p_str) => p_str,
+        None => {panic!("Must supply a list of PIDs");}
+    };
+    let s_pid_list : Vec<&str> = str_pids.split(",").collect::<Vec<&str>>();
+    let mut pid_list : Vec<i32> = Vec::new();
+    for s_pid in s_pid_list.into_iter() {
+         match s_pid.parse::<i32>(){
+            Ok(x) => pid_list.push(x),
+            Err(_) => {println!("Error, invalid PID: {}", s_pid); return;}
+        }
+    }
+
+    let cpu_pct : f32 = match matches.opt_str("c"){
+        Some(x) => {
+            match x.parse::<f32>(){
+                Ok(x) => if x >= 0.1f32 {x} else {println!("Error, invalid net control rate: {}", x); return;},
+                Err(x) => {println!("Error, invalid net control rate: {}", x); return;}
+            }
+        },
+        None => 0f32
+    };
+
+    let net_ctl : u32 = match matches.opt_str("n"){
+        Some(x) => {
+            match x.parse::<u32>(){
+                Ok(x) => if x >= 1 {x} else { println!("Error, invalid net control rate (must be >=1): {}", x); return;},
+                Err(x) => { println!("Error, invalid net control rate (must be >=1): {}", x); return; }
+            }
+        },
+        None => 0
+    };
+
+    if net_ctl > 0 {
+        dbg_print!(dbg, format!("setting net control rate to {}", net_ctl));
+    }
+
+    if cpu_pct > 0f32 {
+        dbg_print!(dbg, format!("setting CPU max rate percent to {}%", cpu_pct));
+    }
+
+    lib::open_process_token();       
 }
