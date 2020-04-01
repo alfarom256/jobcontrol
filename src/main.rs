@@ -68,9 +68,9 @@ fn main(){
         None => {panic!("Must supply a list of PIDs");}
     };
     let s_pid_list : Vec<&str> = str_pids.split(",").collect::<Vec<&str>>();
-    let mut pid_list : Vec<i32> = Vec::new();
+    let mut pid_list : Vec<u32> = Vec::new();
     for s_pid in s_pid_list.into_iter() {
-         match s_pid.parse::<i32>(){
+         match s_pid.parse::<u32>(){
             Ok(x) => pid_list.push(x),
             Err(_) => {println!("Error, invalid PID: {}", s_pid); return;}
         }
@@ -104,5 +104,9 @@ fn main(){
         dbg_print!(dbg, format!("setting CPU max rate percent to {}%", cpu_pct));
     }
 
-    lib::open_process_token();       
+   match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct, dbg){
+       Ok(_) => {},
+       Err(_) => {}
+   };
+   
 }
