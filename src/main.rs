@@ -79,8 +79,8 @@ fn main(){
     let cpu_pct : f32 = match matches.opt_str("c"){
         Some(x) => {
             match x.parse::<f32>(){
-                Ok(x) => if x >= 0.1f32 {x} else {println!("Error, invalid net control rate: {}", x); return;},
-                Err(x) => {println!("Error, invalid net control rate: {}", x); return;}
+                Ok(x) => if x >= 0.1f32 {x} else {println!("Error, invalid cpu control rate: {}", x); return;},
+                Err(x) => {println!("Error, invalid cpu control rate: {}", x); return;}
             }
         },
         None => 0f32
@@ -106,7 +106,7 @@ fn main(){
 
    match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct, dbg){
        Ok(_) => {},
-       Err(_) => {}
+       Err(x) => {dbg_print!(dbg, format!("Error: {:?}", x))}
    };
    
 }
