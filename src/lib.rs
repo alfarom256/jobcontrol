@@ -18,14 +18,14 @@ pub fn assign_and_process_job(pids: Vec<u32>, net_ctl : u32, cpu_pct : f32, dbg 
 }
 
 fn open_process(pid : u32) -> Result<HANDLE, Error>{
-    let mut hProc : HANDLE = std::ptr::null_mut();
+    let mut h_proc : HANDLE = std::ptr::null_mut();
     unsafe {
-        hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SET_QUOTA, FALSE, pid);
+        h_proc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_SET_QUOTA, FALSE, pid);
     }
-    if hProc == std::ptr::null_mut() {
+    if h_proc == std::ptr::null_mut() {
         return Err(Error::last_os_error())
     }
-    Ok(hProc)
+    Ok(h_proc)
 }
 
 fn is_proc_in_job(hJob : HANDLE, hProcess : HANDLE) -> Result<BOOL, Error>{
