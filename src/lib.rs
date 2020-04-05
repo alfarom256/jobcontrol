@@ -79,18 +79,21 @@ pub fn assign_and_process_job(
 
     let cpu_pct_mul: u32;
     // if we're rate limiting the CPU
-    if cpu_pct != 0f32 {
+    println!("CPU RL: {}", cpu_pct);
+    if cpu_pct > 0f32 {
+        println!("Starting CPU ratelimit");
         unsafe {
             // get the actual percent value needed for the API call
             // https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_cpu_rate_control_information
             cpu_pct_mul = (cpu_pct * 100f32) as u32;
+            println!("cpu_pct_mul: {}", cpu_pct_mul);
             let mut jrci_u: JOBOBJECT_CPU_RATE_CONTROL_INFORMATION_u = std::mem::zeroed();
 
             // get the address of the CPU rate in the union
-            let mut jrci_cpu_ptr: &DWORD = jrci_u.CpuRate_mut();
+            let jrci_cpu_ptr: &mut DWORD = jrci_u.CpuRate_mut();
 
             // set it to the addr of the new cpu_pct_mul
-            jrci_cpu_ptr = &cpu_pct_mul;
+            *jrci_cpu_ptr = cpu_pct_mul;
             let mut jcrci = JOBOBJECT_CPU_RATE_CONTROL_INFORMATION {
                 ControlFlags: JOB_OBJECT_CPU_RATE_CONTROL_ENABLE | JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
                 u: jrci_u,
@@ -98,6 +101,7 @@ pub fn assign_and_process_job(
             let jcrci_ptr = &mut jcrci as *mut _ as LPVOID;
 
             // set the jobs information object 
+
             match SetInformationJobObject(h_job, JobObjectCpuRateControlInformation, jcrci_ptr, std::mem::size_of::<JOBOBJECT_CPU_RATE_CONTROL_INFORMATION>() as u32){
                 TRUE => {println!("Set cpu percent control job information to {}%", cpu_pct)},
                 _ => {

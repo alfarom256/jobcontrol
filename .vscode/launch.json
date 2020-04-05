@@ -10,7 +10,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/job_control.exe",
-            "args": ["-d", "-p 33860,21688", "-c 0.1"],
+            "args": ["-d", "-p", "12140", "-c", "0.1"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
