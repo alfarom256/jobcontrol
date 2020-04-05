@@ -46,7 +46,8 @@ pub fn assign_and_process_job(pids: Vec<u32>, net_ctl : u32, cpu_pct : f32, dbg 
     println!("Creating job object");
     let h_job : HANDLE = match create_job_object(){
         Ok(x) => x,
-        Err(e) => {return Err(e)}
+        // close handles and return err
+        Err(e) => {close_handle_vec(v_proc_handles); return Err(e)}
     };
     
     // assign all the processes to the job object 
@@ -54,6 +55,7 @@ pub fn assign_and_process_job(pids: Vec<u32>, net_ctl : u32, cpu_pct : f32, dbg 
         if assign_proc_to_job_object(&h_job, h_proc) == TRUE{
             println!("Added process to job");
         } else {
+            close_handle_vec(v_proc_handles);
             return Err(Error::last_os_error());
         }
     }
