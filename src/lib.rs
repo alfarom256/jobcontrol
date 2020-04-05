@@ -4,7 +4,7 @@ use std::ffi::CString;
 use self::winapi::um::winnt::{HANDLE, PROCESS_SET_QUOTA, PROCESS_TERMINATE, PROCESS_QUERY_LIMITED_INFORMATION};
 use self::winapi::um::processthreadsapi::{OpenProcess};
 use self::winapi::um::jobapi::{IsProcessInJob};
-use self::winapi::um::jobapi2::{CreateJobObjectW};
+use self::winapi::um::jobapi2::{CreateJobObjectW, AssignProcessToJobObject};
 use self::winapi::um::winbase::{CreateJobObjectA};
 use self::winapi::shared::minwindef::{BOOL, TRUE, FALSE};
 
@@ -24,7 +24,7 @@ pub fn assign_and_process_job(pids: Vec<u32>, net_ctl : u32, cpu_pct : f32, dbg 
         v_proc_handles.push(h_proc);
     }
 
-    for h_proc in v_proc_handles.into_iter() {
+    for h_proc in &v_proc_handles {
         if is_proc_in_job(h_proc) == FALSE{
             println!("Process already in job");
             return Err(Error::last_os_error())
@@ -37,6 +37,15 @@ pub fn assign_and_process_job(pids: Vec<u32>, net_ctl : u32, cpu_pct : f32, dbg 
         Ok(x) => x,
         Err(e) => {return Err(e)}
     };
+    
+    // assign all the processes to the job object 
+    for h_proc in &mut v_proc_handles{
+        if assign_proc_to_job_object(&h_job, h_proc) == TRUE{
+            println!("Added process to job");
+        } else {
+            return Err(Error::last_os_error());
+        }
+    }
 
     Ok(1)
 }
@@ -52,10 +61,10 @@ fn open_process(pid : u32) -> Result<HANDLE, Error>{
     Ok(h_proc)
 }
 
-fn is_proc_in_job(h_proc : HANDLE) -> BOOL{
+fn is_proc_in_job(h_proc : &HANDLE) -> BOOL{
     let mut b_result : BOOL = FALSE;
     unsafe {
-        IsProcessInJob(h_proc, std::ptr::null_mut(), &mut b_result);
+        IsProcessInJob(*h_proc, std::ptr::null_mut(), &mut b_result);
     }
     b_result
 }
@@ -72,7 +81,10 @@ fn create_job_object() -> Result<HANDLE, Error>{
     Ok(h_job)
 }
 
-fn assign_proc_to_job_object(h_job : HANDLE, h_proc : HANDLE) -> Result<BOOL, Error>{
-
-    Ok(1)
+fn assign_proc_to_job_object(h_job : &HANDLE, h_proc : &HANDLE) -> BOOL {
+    let b_result : BOOL;
+    unsafe {
+        b_result = AssignProcessToJobObject(*h_job, *h_proc);
+    };
+    b_result
 }
