@@ -29,8 +29,8 @@ fn print_help(prog : &str, opts: Options){
 }
 
 fn main(){
-    let mut quiet : bool;
-    let mut dbg : bool;
+    let quiet : bool;
+    let dbg : bool;
 
     //https://www.cs.brandeis.edu/~cs146a/rust/rustbyexample-02-21-2015/arg/getopts.html
     let args: Vec<String> = env::args().map(|x| x.to_string()).collect();
@@ -79,7 +79,7 @@ fn main(){
     let cpu_pct : f32 = match matches.opt_str("c"){
         Some(x) => {
             match x.parse::<f32>(){
-                Ok(x) => if x >= 0.1f32 {x} else {println!("Error, invalid cpu control rate: {}", x); return;},
+                Ok(x) => if x >= 0.01f32 {x} else {println!("Error, invalid cpu control rate: {}", x); return;},
                 Err(x) => {println!("Error, invalid cpu control rate: {}", x); return;}
             }
         },
