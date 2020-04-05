@@ -1,4 +1,6 @@
 extern crate winapi;
+extern crate nt_version;
+
 use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE, LPVOID};
 use self::winapi::um::handleapi::CloseHandle;
 use self::winapi::um::jobapi::IsProcessInJob;
@@ -9,8 +11,10 @@ use self::winapi::um::winnt::{
     JOBOBJECT_CPU_RATE_CONTROL_INFORMATION_u, HANDLE, JOBOBJECT_CPU_RATE_CONTROL_INFORMATION,
     PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
     PROCESS_TERMINATE, JOB_OBJECT_CPU_RATE_CONTROL_ENABLE, JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
-    JobObjectCpuRateControlInformation
+    JobObjectCpuRateControlInformation, JobObjectNetRateControlInformation, 
+    JOBOBJECT_NET_RATE_CONTROL_INFORMATION, JOB_OBJECT_NET_RATE_CONTROL_ENABLE, JOB_OBJECT_NET_RATE_CONTROL_MAX_BANDWIDTH
 };
+
 use std::ffi::CString;
 use std::io::Error;
 
@@ -82,44 +86,79 @@ pub fn assign_and_process_job(
     // now that all of the processes are assigned to the job
     // take the values from the args and take the appropriate actions
 
-    let cpu_pct_mul: u32;
     // if we're rate limiting the CPU
     println!("CPU RL: {}", cpu_pct);
     if cpu_pct > 0f32 {
-        println!("Starting CPU ratelimit");
-        unsafe {
-            // get the actual percent value needed for the API call
-            // https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_cpu_rate_control_information
-            cpu_pct_mul = (cpu_pct * 100f32) as u32;
-            println!("cpu_pct_mul: {}", cpu_pct_mul);
-            let mut jrci_u: JOBOBJECT_CPU_RATE_CONTROL_INFORMATION_u = std::mem::zeroed();
-
-            // get the address of the CPU rate in the union
-            let jrci_cpu_ptr: &mut DWORD = jrci_u.CpuRate_mut();
-
-            // set it to the addr of the new cpu_pct_mul
-            *jrci_cpu_ptr = cpu_pct_mul;
-            let mut jcrci = JOBOBJECT_CPU_RATE_CONTROL_INFORMATION {
-                ControlFlags: JOB_OBJECT_CPU_RATE_CONTROL_ENABLE | JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
-                u: jrci_u,
-            };
-            let jcrci_ptr = &mut jcrci as *mut _ as LPVOID;
-
-            // set the jobs information object 
-
-            match SetInformationJobObject(h_job, JobObjectCpuRateControlInformation, jcrci_ptr, std::mem::size_of::<JOBOBJECT_CPU_RATE_CONTROL_INFORMATION>() as u32){
-                TRUE => {println!("[Success!] Set cpu percent control job information to {}%", cpu_pct)},
-                _ => {
-                    println!("[Failed!] an error occurred in SetInformationJobObject");
-                    close_handle(&h_job);
-                    close_handle_vec(v_proc_handles);
-                    return Err(Error::last_os_error())
-                }
-            }
+        match ratelimit_cpu(h_job, cpu_pct){
+            Err(e) => {close_handle_vec(v_proc_handles); return Err(e)},
+            Ok(_) => ()
         }
+    }
+    // if we're rate limiting the net traffic ()
+    if net_ctl > 0 {
+        let (major, minor, _) = nt_version::get();
+        println!("Major, Minor: {}.{}", major, minor);
+        if major < 10 {
+            println!("Cannot set net control rate for NT < 10.0 (Win 10 / Server 2016 +)");
+            return Err(Error::from_raw_os_error(1))
+        }
+        ratelimit_net(h_job, net_ctl) ?;
     }
     Ok(1)
 }
+
+fn ratelimit_net(h_job : HANDLE, net_rate : u32) -> Result<BOOL, Error>{
+    unsafe {
+        let mut jnrci = JOBOBJECT_NET_RATE_CONTROL_INFORMATION{
+            MaxBandwidth: net_rate as u64,
+            ControlFlags: JOB_OBJECT_NET_RATE_CONTROL_ENABLE | JOB_OBJECT_NET_RATE_CONTROL_MAX_BANDWIDTH,
+            DscpTag: 0
+        };
+        let jnrci_ptr = &mut jnrci as *mut _ as LPVOID; 
+        match SetInformationJobObject(h_job, JobObjectNetRateControlInformation, jnrci_ptr, std::mem::size_of::<JOBOBJECT_NET_RATE_CONTROL_INFORMATION>() as u32){
+            TRUE => {println!("[Success!] Set max badnwidth (bytes/s) to {}%", net_rate); return Ok(TRUE)},
+            _ => {
+                println!("[Failed!] an error occurred in SetInformationJobObject");
+                close_handle(&h_job);
+                return Err(Error::last_os_error())
+            }
+        }
+    }
+}
+
+fn ratelimit_cpu(h_job : HANDLE, cpu_pct : f32) -> Result<BOOL, Error>{
+    println!("Starting CPU ratelimit");
+    unsafe {
+        // get the actual percent value needed for the API call
+        // https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_cpu_rate_control_information
+        let cpu_pct_mul = (cpu_pct * 100f32) as u32;
+        println!("cpu_pct_mul: {}", cpu_pct_mul);
+        let mut jrci_u: JOBOBJECT_CPU_RATE_CONTROL_INFORMATION_u = std::mem::zeroed();
+
+        // get the address of the CPU rate in the union
+        let jrci_cpu_ptr: &mut DWORD = jrci_u.CpuRate_mut();
+
+        // set it to the addr of the new cpu_pct_mul
+        *jrci_cpu_ptr = cpu_pct_mul;
+        let mut jcrci = JOBOBJECT_CPU_RATE_CONTROL_INFORMATION {
+            ControlFlags: JOB_OBJECT_CPU_RATE_CONTROL_ENABLE | JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
+            u: jrci_u,
+        };
+        let jcrci_ptr = &mut jcrci as *mut _ as LPVOID;
+
+        // set the jobs information object 
+
+        match SetInformationJobObject(h_job, JobObjectCpuRateControlInformation, jcrci_ptr, std::mem::size_of::<JOBOBJECT_CPU_RATE_CONTROL_INFORMATION>() as u32){
+            TRUE => {println!("[Success!] Set cpu percent control job information to {}%", cpu_pct); return Ok(TRUE)},
+            _ => {
+                println!("[Failed!] an error occurred in SetInformationJobObject");
+                close_handle(&h_job);
+                return Err(Error::last_os_error())
+            }
+        }
+    }
+}
+
 
 fn close_handle(h: &HANDLE) -> BOOL {
     let b_res: BOOL;
