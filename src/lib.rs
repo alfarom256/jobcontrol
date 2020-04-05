@@ -7,7 +7,7 @@ use self::winapi::um::processthreadsapi::OpenProcess;
 use self::winapi::um::winbase::CreateJobObjectA;
 use self::winapi::um::winnt::{
     JOBOBJECT_CPU_RATE_CONTROL_INFORMATION_u, HANDLE, JOBOBJECT_CPU_RATE_CONTROL_INFORMATION,
-    PJOBOBJECT_CPU_RATE_CONTROL_INFORMATION, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
     PROCESS_TERMINATE, JOB_OBJECT_CPU_RATE_CONTROL_ENABLE, JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP,
     JobObjectCpuRateControlInformation
 };
@@ -19,6 +19,12 @@ todo:
 
 Consideration needs to be made to close handles to all processes before returning an error.
 Change debug printing to only print when compiled in debug
+Change the split vectors for PID and HANDLE to be Vec<proc_data>
+
+struct proc_data {
+    pid: u32
+    h_proc: HANDLE
+}
 
 */
 

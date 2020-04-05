@@ -1,9 +1,7 @@
 extern crate getopts;
-extern crate log;
 
 use getopts::Options;
 use std::env;
-use log::{debug};
 
 mod lib;
 
@@ -98,16 +96,15 @@ fn main(){
     };
 
     if net_ctl > 0 {
-        debug!("setting net control rate to {}", net_ctl);
+        println!("setting net control rate to {}", net_ctl);
     }
 
     if cpu_pct > 0f32 {
-        debug!("setting CPU max rate percent to {}%", cpu_pct);
+        println!("setting CPU max rate percent to {}%", cpu_pct);
     }
 
    match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct){
        Ok(_) => {},
-       Err(x) => {debug!("Error: {:?}", x)}
-   };
-   
+       Err(x) => {println!("Error: {:?}", x)}
+   };  
 }
