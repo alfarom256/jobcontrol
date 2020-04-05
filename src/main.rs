@@ -1,7 +1,12 @@
 extern crate getopts;
+extern crate log;
+
 use getopts::Options;
 use std::env;
+use log::{debug};
+
 mod lib;
+
 
 
 /*
@@ -17,10 +22,6 @@ args:
 -d 
     debug
 */
-
-macro_rules!  dbg_print {
-    ($f:expr,$e:expr) => {if $f {println!("DEBUG: {}", $e);}}
-}
 
 
 fn print_help(prog : &str, opts: Options){
@@ -97,16 +98,16 @@ fn main(){
     };
 
     if net_ctl > 0 {
-        dbg_print!(dbg, format!("setting net control rate to {}", net_ctl));
+        debug!("setting net control rate to {}", net_ctl);
     }
 
     if cpu_pct > 0f32 {
-        dbg_print!(dbg, format!("setting CPU max rate percent to {}%", cpu_pct));
+        debug!("setting CPU max rate percent to {}%", cpu_pct);
     }
 
-   match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct, dbg){
+   match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct){
        Ok(_) => {},
-       Err(x) => {dbg_print!(dbg, format!("Error: {:?}", x))}
+       Err(x) => {debug!("Error: {:?}", x)}
    };
    
 }

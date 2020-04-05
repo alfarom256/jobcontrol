@@ -26,7 +26,6 @@ pub fn assign_and_process_job(
     pids: Vec<u32>,
     net_ctl: u32,
     cpu_pct: f32,
-    dbg: bool,
 ) -> Result<u32, Error> {
     let mut v_proc_handles: Vec<HANDLE> = Vec::new();
     // open all of the processes and get their respective handles
@@ -103,8 +102,9 @@ pub fn assign_and_process_job(
             // set the jobs information object 
 
             match SetInformationJobObject(h_job, JobObjectCpuRateControlInformation, jcrci_ptr, std::mem::size_of::<JOBOBJECT_CPU_RATE_CONTROL_INFORMATION>() as u32){
-                TRUE => {println!("Set cpu percent control job information to {}%", cpu_pct)},
+                TRUE => {println!("[Success!] Set cpu percent control job information to {}%", cpu_pct)},
                 _ => {
+                    println!("[Failed!] an error occurred in SetInformationJobObject");
                     close_handle(&h_job);
                     close_handle_vec(v_proc_handles);
                     return Err(Error::last_os_error())

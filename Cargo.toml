@@ -6,3 +6,4 @@ authors = ["Mike Alfaro <alfarom256@gmail.com>"]
 [dependencies]
 getopts = "0.2"
 winapi = {version = "0.3.8", features = ["winnt", "processthreadsapi", "jobapi", "jobapi2", "minwindef", "winbase", "handleapi"]}
+log = "0.4.8"
