@@ -37,6 +37,7 @@ fn main(){
     opts.optopt("p", "pids", "PID list to interact with", "4,1013,139213,400");
     opts.optopt("c", "cpu", "max CPU usage for all processes (must be between 100.0 and 0.01)", "0.01");
     opts.optopt("n", "netrate", "attempt to set the bytes per second of network traffic for all processes ( >= W10, Server 2016 ONLY )", "50");
+    opts.optflag("s", "skip", "skip processes already in jobs instead of terminating");
     opts.optflag("h", "help", "display help and usage");
     
     let matches = match opts.parse(args){
@@ -47,6 +48,12 @@ fn main(){
     if matches.opt_present("h") {
         print_help(prog, opts);
         return;
+    }
+
+    let do_skip = matches.opt_present("s");
+
+    if do_skip {
+        println!("Not terminating on failure to assign process to job...");
     }
 
     // get the list of pids
@@ -91,7 +98,7 @@ fn main(){
         println!("setting CPU max rate percent to {}%", cpu_pct);
     }
 
-   match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct){
+   match lib::assign_and_process_job(pid_list, net_ctl, cpu_pct, do_skip){
        Ok(_) => {},
        Err(x) => {println!("Error: {:?}", x)}
    };  
